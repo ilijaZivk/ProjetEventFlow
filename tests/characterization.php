@@ -21,21 +21,31 @@ function createBooking(
     return $booking;
 }
 
-ob_start();
+// Confirme une réservation en masquant uniquement les echo du service
+// (paiement, SQL, email), pas les résultats des tests.
+function confirmSilently(BookingService $service, Booking $booking, string $paymentMethod = 'stripe'): float
+{
+    ob_start();
+    try {
+        return $service->confirm($booking, $paymentMethod);
+    } finally {
+        ob_end_clean();
+    }
+}
+
 $service = new BookingService();
 
 $standard = createBooking('standard', 'day', 50.0, 2);
-$standardTotal = $service->confirm($standard, 'stripe');
+$standardTotal = confirmSilently($service, $standard);
 $tests->near(100.0, $standardTotal, 'standard customer keeps initial total');
 $tests->same('confirmed', $standard->status, 'booking becomes confirmed');
 
 $vip = createBooking('vip', 'day', 50.0, 2);
-$vipTotal = $service->confirm($vip, 'stripe');
+$vipTotal = confirmSilently($service, $vip);
 $tests->near(90.0, $vipTotal, 'legacy VIP rule gives 10 percent discount');
 
 $threeDays = createBooking('standard', '3days', 60.0, 2);
-$threeDaysTotal = $service->confirm($threeDays, 'stripe');
+$threeDaysTotal = confirmSilently($service, $threeDays);
 $tests->near(110.0, $threeDaysTotal, 'legacy three day pass discount is 10 euros');
 
-ob_end_clean();
 $tests->summary();
