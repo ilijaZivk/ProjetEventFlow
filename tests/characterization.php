@@ -21,8 +21,6 @@ function createBooking(
     return $booking;
 }
 
-// Confirme une réservation en masquant uniquement les echo du service
-// (paiement, SQL, email), pas les résultats des tests.
 function confirmSilently(BookingService $service, Booking $booking, string $paymentMethod = 'stripe'): float
 {
     ob_start();
@@ -47,5 +45,32 @@ $tests->near(90.0, $vipTotal, 'legacy VIP rule gives 10 percent discount');
 $threeDays = createBooking('standard', '3days', 60.0, 2);
 $threeDaysTotal = confirmSilently($service, $threeDays);
 $tests->near(110.0, $threeDaysTotal, 'legacy three day pass discount is 10 euros');
+
+$emptyBooking = new Booking(1, new Customer(1, 'test@example.com'));
+$tests->throws(
+    fn () => confirmSilently($service, $emptyBooking),
+    'Empty booking',
+    'empty booking is rejected'
+);
+
+$badEmail = new Booking(1, new Customer(1, 'pas-un-email'));
+$badEmail->addItem(new BookingItem(new Ticket('TEST', 'Ticket test', 50.0), 1));
+$tests->throws(
+    fn () => confirmSilently($service, $badEmail),
+    'Invalid email',
+    'invalid email is rejected'
+);
+
+$tests->throws(
+    fn () => confirmSilently($service, createBooking(quantity: 0)),
+    'Invalid quantity',
+    'zero quantity is rejected'
+);
+
+$tests->throws(
+    fn () => confirmSilently($service, createBooking(), 'paypal'),
+    'Unknown payment method',
+    'unknown payment method is rejected'
+);
 
 $tests->summary();
