@@ -6,14 +6,16 @@ final class EventFlowFactory
 {
     public static function bookingService(): BookingService
     {
+        $logger = new ConsoleLogger();
+
         return new BookingService(
             new PriceCalculator(
                 new VipTierDiscount(),
                 new ThreeDayPassDiscount(),
             ),
             new PaymentGateways(
-                new StripePaymentGateway(new StripeClient()),
-                new PayFastPaymentGateway(new PayFastSdk()),
+                new MonitoredPaymentGateway(new StripePaymentGateway(new StripeClient()), $logger),
+                new MonitoredPaymentGateway(new PayFastPaymentGateway(new PayFastSdk()), $logger),
             ),
             new ConsoleBookingRepository(),
             new SendConfirmationEmail(new EmailService()),
