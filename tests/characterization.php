@@ -41,27 +41,25 @@ $tests->same(BookingStatus::Confirmed, $standard->status(), 'booking becomes con
 
 $vip = createBooking(CustomerType::Vip, PassType::Day, 50.0, 2);
 $vipTotal = confirmSilently($service, $vip);
-$tests->same(9000, $vipTotal->cents(), 'legacy VIP rule gives 10 percent discount');
+$tests->same(9000, $vipTotal->cents(), 'VIP with 100 euros initial total gets 10 percent');
 
 $threeDays = createBooking(CustomerType::Standard, PassType::ThreeDays, 60.0, 2);
 $threeDaysTotal = confirmSilently($service, $threeDays);
-$tests->same(11000, $threeDaysTotal->cents(), 'legacy three day pass discount is 10 euros');
+$tests->same(10000, $threeDaysTotal->cents(), 'three day pass discount is now 20 euros');
 
 $vipThreeDays = createBooking(CustomerType::Vip, PassType::ThreeDays, 50.0, 2);
 $vipThreeDaysTotal = confirmSilently($service, $vipThreeDays);
-$tests->same(8000, $vipThreeDaysTotal->cents(), 'legacy VIP discount is applied before three day pass discount');
+$tests->same(7000, $vipThreeDaysTotal->cents(), 'VIP discount is applied before three day pass discount');
 
 $floatDrift = createBooking(CustomerType::Vip, PassType::Day, 79.90, 2);
 $floatDriftTotal = confirmSilently($service, $floatDrift);
 $tests->same(14382, $floatDriftTotal->cents(), 'amounts are exact cents without float drift');
 
 $cheapThreeDays = createBooking(CustomerType::Standard, PassType::ThreeDays, 5.0, 1);
-$tests->throws(
-    fn () => confirmSilently($service, $cheapThreeDays),
-    'stripe payment failed: Invalid amount',
-    'legacy zero total is sent to Stripe and fails'
-);
-$tests->same(BookingStatus::Pending, $cheapThreeDays->status(), 'booking stays pending when payment fails');
+$cheapTotal = confirmSilently($service, $cheapThreeDays);
+$tests->same(0, $cheapTotal->cents(), 'final amount is never negative');
+$tests->same(BookingStatus::Confirmed, $cheapThreeDays->status(), 'free booking is confirmed without payment');
+$tests->same('none', $cheapThreeDays->paymentReceipt()->provider, 'free booking does not call any payment provider');
 
 $emptyBooking = new Booking(1, new Customer(1, 'test@example.com'));
 $tests->throws(

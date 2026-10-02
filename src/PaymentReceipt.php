@@ -10,4 +10,9 @@ final class PaymentReceipt
         public readonly Money $amount
     ) {
     }
+
+    public static function noPaymentRequired(): self
+    {
+        return new self('none', '', Money::zero());
+    }
 }
