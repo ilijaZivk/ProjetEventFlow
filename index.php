@@ -8,24 +8,25 @@ $customer = new Customer(
     id: 42,
     email: 'lea@example.com',
     phone: '0612345678',
-    type: 'vip'
+    type: CustomerType::Vip
 );
 
 $dayTicket = new Ticket(
     code: 'DAY-1',
     label: 'Pass Jour 1',
-    price: 79.90
+    price: Money::fromEuros(79.90)
 );
 
 $booking = new Booking(
     id: 1001,
     customer: $customer,
-    passType: 'day'
+    passType: PassType::Day
 );
 
 $booking->addItem(new BookingItem($dayTicket, 2));
 
-$service = new BookingService();
+$service = EventFlowFactory::bookingService();
 $total = $service->confirm($booking, 'stripe');
 
-echo 'TOTAL FINAL: ' . number_format($total, 2, '.', '') . PHP_EOL;
+echo 'PAYMENT ' . $booking->paymentReceipt()->transactionId . PHP_EOL;
+echo 'TOTAL FINAL: ' . $total->format() . PHP_EOL;
