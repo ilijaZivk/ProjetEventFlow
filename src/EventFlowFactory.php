@@ -15,6 +15,11 @@ final class EventFlowFactory
                 new StripePaymentGateway(new StripeClient()),
                 new PayFastPaymentGateway(new PayFastSdk()),
             ),
+            new ConsoleBookingRepository(),
+            new SendConfirmationEmail(new EmailService()),
+            new AwardLoyaltyPoints(new LoyaltyService()),
+            new TrackBookingConfirmed(new AnalyticsClient()),
+            new SendConfirmationSms(new SmsClient()),
         );
     }
 }

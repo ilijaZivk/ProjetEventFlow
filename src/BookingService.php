@@ -4,10 +4,16 @@ declare(strict_types=1);
 
 final class BookingService
 {
+    /** @var BookingConfirmedListener[] */
+    private array $listeners;
+
     public function __construct(
         private readonly PriceCalculator $priceCalculator,
-        private readonly PaymentGateways $paymentGateways
+        private readonly PaymentGateways $paymentGateways,
+        private readonly BookingRepository $bookings,
+        BookingConfirmedListener ...$listeners
     ) {
+        $this->listeners = $listeners;
     }
 
     public function confirm(Booking $booking, string $paymentMethod = 'stripe'): Money
@@ -21,11 +27,11 @@ final class BookingService
             : $gateway->charge($total, "booking-{$booking->id}");
 
         $booking->markAsConfirmed($total, $receipt);
+        $this->bookings->save($booking);
 
-        echo "SQL INSERT booking={$booking->id} total={$total->format()} status={$booking->status()->value}" . PHP_EOL;
-
-        $emailService = new EmailService();
-        $emailService->sendConfirmation($booking->customer->email, $booking->id);
+        foreach ($this->listeners as $listener) {
+            $listener->onBookingConfirmed($booking);
+        }
 
         return $total;
     }
